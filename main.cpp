@@ -282,7 +282,7 @@ double* MatrixMultiplyThreaded(double* a, double *b, int size, int threadCount)
 	return answer;
 }
 
-// 
+// Tests the performance of different matrix multiplication methods
 void TestPerformance(int N)
 {
 	std::cout << "<<< TEST FOR SIZE " << N << " >>>" << std::endl;
@@ -307,16 +307,6 @@ void TestPerformance(int N)
 	std::cout << "Matrix Multiplication (1 Thread) Time = " << dur2.count() << " seconds." << std::endl;
 	std::cout << "Matrix Multiplication (1 Thread) Residual Error = " << MatrixResidualError(singleThreadResult, blasResult, N, N) << std::endl;
 
-	//std::cout << "A" << std::endl;
-	//PrintMatrix(matrixA, N, N);
-	//std::cout << "B" << std::endl;
-	//PrintMatrix(matrixB, N, N);
-
-	//std::cout << "result" << std::endl;
-	//PrintMatrix(singleThreadResult, 4, 4);
-	//std::cout << "blas" << std::endl;
-	//PrintMatrix(blasResult, 4, 4);
-
 	delete[] singleThreadResult;
 
 	auto start3 = std::chrono::high_resolution_clock::now();
@@ -338,8 +328,8 @@ int main()
 {
 	srand(0);
 
-	int sizes[12] = { 64, 256, 512, 1024, 2048, 3200, 4000, 5000, 5500, 6000, 6500, 7000 };
-	for (int i = 0; i < 12; i++)
+	int sizes[10] = { 64, 256, 512, 1024, 2048, 3200, 4000, 5000, 5500, 6000 };
+	for (int i = 0; i < 10; i++)
 	{
 		TestPerformance(sizes[i]);
 	}
