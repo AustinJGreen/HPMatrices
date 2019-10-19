@@ -39,7 +39,7 @@ typedef struct MatrixTileArgs
 	int startB;
 };
 
-//Computes the residual between 2 matrices of the same size
+//Computes the residual matrix between 2 matrices of the same size
 double* MatrixResidual(double *a, double *b, int width, int height)
 {
 	double *residual = new double[width * height];
@@ -51,13 +51,25 @@ double* MatrixResidual(double *a, double *b, int width, int height)
 	return residual;
 }
 
-//Generates an array of size N with random elements 1..N
+//Computes the residual error between 2 matrices of the same size
+double MatrixResidualError(double *a, double *b, int width, int height)
+{
+	double residual = 0;
+	for (int i = 0; i < width * height; i++)
+	{
+		residual += a[i] - b[i];
+	}
+
+	return residual;
+}
+
+//Generates an array of size N with random elements [0, 2]
 double* GenerateRandomMatrix(int size)
 {
 	double *arr = new double[size];
 	for (int i = 0; i < size; i++)
 	{
-		*(arr + i) = (rand() / RAND_MAX) * size;
+		*(arr + i) = rand() % 12;
 	}
 
 	return arr;
@@ -270,13 +282,55 @@ double* MatrixMultiplyThreaded(double* a, double *b, int size, int threadCount)
 	return answer;
 }
 
-
-double* TestPerformance(int N, int threads)
+// 
+void TestPerformance(int N)
 {
+	std::cout << "<<< TEST FOR SIZE " << N << " >>>" << std::endl;
+
 	double *matrixA = GenerateRandomMatrix(N * N);
 	double *matrixB = GenerateRandomMatrix(N * N);
 
-	return 0;
+	double *blasResult = new double[N * N];
+
+	auto start1 = std::chrono::high_resolution_clock::now();
+	BlasMatrixMultiply(matrixB, N, N, matrixA, N, N, blasResult);
+	auto end1 = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> dur1 = end1 - start1;
+
+	std::cout << "BLAS Time = " << dur1.count() << " seconds." << std::endl;
+
+	auto start2 = std::chrono::high_resolution_clock::now();
+	double *singleThreadResult = MatrixMultiply(matrixA, N, N, matrixB, N, N, 0, N, 0, N);
+	auto end2 = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> dur2 = end2 - start2;
+
+	std::cout << "Matrix Multiplication (1 Thread) Time = " << dur2.count() << " seconds." << std::endl;
+	std::cout << "Matrix Multiplication (1 Thread) Residual Error = " << MatrixResidualError(singleThreadResult, blasResult, N, N) << std::endl;
+
+	//std::cout << "A" << std::endl;
+	//PrintMatrix(matrixA, N, N);
+	//std::cout << "B" << std::endl;
+	//PrintMatrix(matrixB, N, N);
+
+	//std::cout << "result" << std::endl;
+	//PrintMatrix(singleThreadResult, 4, 4);
+	//std::cout << "blas" << std::endl;
+	//PrintMatrix(blasResult, 4, 4);
+
+	delete[] singleThreadResult;
+
+	auto start3 = std::chrono::high_resolution_clock::now();
+	double *threadedResult = MatrixMultiplyThreaded(matrixA, matrixB, N, 4);
+	auto end3 = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> dur3 = end3 - start3;
+
+	std::cout << "Matrix Multiplication (4 Threads) Time = " << dur3.count() << " seconds." << std::endl;
+	std::cout << "Matrix Multiplication (4 Threads) Residual Error = " << MatrixResidualError(threadedResult, blasResult, N, N) << std::endl;
+
+	delete[] threadedResult;
+	delete[] blasResult;
+	delete[] matrixA;
+	delete[] matrixB;
 }
 
 //Main subroutine
@@ -284,32 +338,11 @@ int main()
 {
 	srand(0);
 
-	const int size = 16;
-	const int threads = 4;
-
-	double *matrixA = GenerateRandomMatrix(size * size);
-	double *matrixB = GenerateRandomMatrix(size * size);
-
-	auto start = std::chrono::high_resolution_clock::now();
-
-	double *dgemmResult = new double[size * size];
-	BlasMatrixMultiply(matrixA, size, size, matrixB, size, size, dgemmResult);
-
-	double *threadedResult = MatrixMultiplyThreaded(matrixA, matrixB, size, threads);
-
-	double *residual = MatrixResidual(dgemmResult, threadedResult, size, size);
-
-	auto end = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double> elapsed = end - start;
-
-	std::cout << "Elepased (" << threads << " threads) = " << elapsed.count() << " seconds" << std::endl;
-	PrintMatrix(residual, size, size);
-
-	delete[] dgemmResult;
-	delete[] threadedResult;
-	delete[] residual;
-	delete[] matrixA;
-	delete[] matrixB;
+	int sizes[12] = { 64, 256, 512, 1024, 2048, 3200, 4000, 5000, 5500, 6000, 6500, 7000 };
+	for (int i = 0; i < 12; i++)
+	{
+		TestPerformance(sizes[i]);
+	}
 
 	std::cout << "Done. Press any key to exit...";
 	std::cin.get();
